@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - modify-upload-doc-code
+
   pull_request:
     branches:
       - main
@@ -13,6 +14,9 @@ jobs:
   backend-tests:
     name: Backend Tests
     runs-on: ubuntu-latest
+
+    env:
+      PYTHONPATH: ${{ github.workspace }}
 
     steps:
       - name: Checkout repository
@@ -31,7 +35,7 @@ jobs:
 
       - name: Run backend tests
         run: |
-          pytest tests -v
+          python -m pytest tests -v
 
   frontend-build:
     name: Frontend Build
