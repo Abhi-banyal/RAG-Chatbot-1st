@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - modify-upload-doc-code
 
   pull_request:
     branches:
