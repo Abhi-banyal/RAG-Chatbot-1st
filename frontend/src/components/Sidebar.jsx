@@ -5,10 +5,8 @@ export default function Sidebar({
   health,
   documents,
   uploadStatus,
-  rebuildStatus,
   sessionId,
   onUpload,
-  onRebuild,
   onNewChat,
   onCloseMobile,
   isOpen,
@@ -44,9 +42,7 @@ export default function Sidebar({
         <UploadPanel
           documents={documents}
           uploadStatus={uploadStatus}
-          rebuildStatus={rebuildStatus}
           onUpload={onUpload}
-          onRebuild={onRebuild}
         />
 
         <div className="sidebar-section">

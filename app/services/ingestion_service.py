@@ -7,9 +7,9 @@ from langchain_community.vectorstores import FAISS
 
 from app.chunker import chunk_documents
 from app.config import DATA_DIR, UPLOADS_DIR
-from app.document_builder import build_documents
+from app.document_builder import build_documents, build_documents_for_file
 from app.file_reader import FILE_TYPE_LABELS
-from app.ingest import ensure_vectorstore_dir, get_embeddings
+from app.ingest import append_documents_to_vectorstore, ensure_vectorstore_dir, get_embeddings
 
 
 SUPPORTED_UPLOAD_SUFFIXES = {".pdf", ".txt", ".png", ".jpg", ".jpeg"}
@@ -43,6 +43,34 @@ def save_upload_bytes(filename: str, content: bytes, destination_dir: Path | Non
     destination = _unique_destination(base_dir, filename)
     destination.write_bytes(content)
     return destination
+
+
+def ingest_single_file(file_path: Path) -> IngestionResult:
+    if not file_path.exists():
+        raise FileNotFoundError(f"Uploaded file not found: {file_path}")
+
+    print(f"Uploaded file name: {file_path.name}")
+    print(f"Saved path: {file_path}")
+    print(f"Processing started for {file_path.name}")
+
+    documents = build_documents_for_file(file_path)
+    if not documents:
+        raise ValueError(f"No supported content was extracted from {file_path.name}.")
+
+    chunks = chunk_documents(documents)
+    if not chunks:
+        raise ValueError(f"Content was extracted from {file_path.name}, but no chunks were created.")
+
+    vectorstore_dir = append_documents_to_vectorstore(chunks)
+
+    print(f"Number of chunks created: {len(chunks)}")
+    print(f"Vectorstore updated: {vectorstore_dir}")
+
+    return IngestionResult(
+        documents_indexed=len(documents),
+        chunks_indexed=len(chunks),
+        vectorstore_dir=str(vectorstore_dir),
+    )
 
 
 def list_available_documents() -> list[dict[str, object]]:

@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 
-export default function UploadPanel({ uploadStatus, rebuildStatus, onUpload, onRebuild }) {
+export default function UploadPanel({ uploadStatus, onUpload }) {
   const inputRef = useRef(null)
 
   return (
@@ -20,13 +20,9 @@ export default function UploadPanel({ uploadStatus, rebuildStatus, onUpload, onR
         <button type="button" className="sidebar-button secondary" onClick={() => inputRef.current?.click()}>
           Upload files
         </button>
-        <button type="button" className="sidebar-button primary" onClick={onRebuild}>
-          Rebuild index
-        </button>
       </div>
 
       {uploadStatus ? <p className="sidebar-note">{uploadStatus}</p> : null}
-      {rebuildStatus ? <p className="sidebar-note">{rebuildStatus}</p> : null}
     </section>
   )
 }

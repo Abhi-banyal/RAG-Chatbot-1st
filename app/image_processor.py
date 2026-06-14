@@ -390,9 +390,22 @@ def build_image_documents(data_dirs: Iterable[Path] | None = None) -> list[Docum
         print("No supported visual files found.")
         return []
 
-    vision_model: AzureChatOpenAI | None = None
+    vision_model = _get_optional_vision_model()
+    image_docs: list[Document] = []
+
+    for image_path in image_paths:
+        image_docs.extend(build_image_documents_for_file(image_path, vision_model=vision_model))
+
+    for pdf_path in pdf_paths:
+        image_docs.extend(build_image_documents_for_file(pdf_path, vision_model=vision_model))
+
+    print(f"Total image documents created: {len(image_docs)}")
+    return image_docs
+
+
+def _get_optional_vision_model() -> AzureChatOpenAI | None:
     try:
-        vision_model = get_vision_chat_model()
+        return get_vision_chat_model()
     except ValueError as exc:
         print(
             "Azure chat settings are incomplete or a vision deployment is unavailable. "
@@ -400,16 +413,26 @@ def build_image_documents(data_dirs: Iterable[Path] | None = None) -> list[Docum
             "Add a vision-capable deployment to enable richer diagram understanding."
         )
         print(str(exc))
+        return None
 
-    image_docs: list[Document] = []
 
-    for image_path in image_paths:
-        description = describe_standalone_image(image_path, vision_model)
+def build_image_documents_for_file(
+    file_path: Path,
+    vision_model: AzureChatOpenAI | None = None,
+) -> list[Document]:
+    suffix = file_path.suffix.lower()
+    model = vision_model
+
+    if model is None and suffix in SUPPORTED_IMAGE_EXTENSIONS.union({SUPPORTED_PDF_EXTENSION}):
+        model = _get_optional_vision_model()
+
+    if suffix in SUPPORTED_IMAGE_EXTENSIONS:
+        description = describe_standalone_image(file_path, model)
         document = Document(
             page_content=description,
             metadata={
                 **_figure_metadata(
-                    source=image_path.name,
+                    source=file_path.name,
                     page_number=None,
                     index=1,
                     figure_number=extract_figure_number(description),
@@ -419,12 +442,13 @@ def build_image_documents(data_dirs: Iterable[Path] | None = None) -> list[Docum
                 "render_type": "standalone_image",
             },
         )
-        image_docs.append(document)
-        print(f"Processed image: {image_path.name}")
+        print(f"Processed image: {file_path.name}")
         print(f"Description length: {len(description)} characters")
+        return [document]
 
-    for pdf_path in pdf_paths:
-        with fitz.open(pdf_path) as pdf:
+    if suffix == SUPPORTED_PDF_EXTENSION:
+        image_docs: list[Document] = []
+        with fitz.open(file_path) as pdf:
             for page_index in range(pdf.page_count):
                 page = pdf.load_page(page_index)
                 page_text = page.get_text("text").strip()
@@ -433,24 +457,25 @@ def build_image_documents(data_dirs: Iterable[Path] | None = None) -> list[Docum
 
                 figure_number = extract_figure_number(page_text)
                 description = describe_pdf_page(
-                    pdf_path,
+                    file_path,
                     page_index,
-                    vision_model,
+                    model,
                     page_text=page_text,
                     figure_number=figure_number,
                 )
                 page_documents = _build_pdf_image_documents(
-                    pdf_path=pdf_path,
+                    pdf_path=file_path,
                     page_number=page_index + 1,
                     description=description,
                     page_text=page_text,
                 )
                 image_docs.extend(page_documents)
-                print(f"Processed PDF page image: {pdf_path.name} page {page_index + 1}")
+                print(f"Processed PDF page image: {file_path.name} page {page_index + 1}")
                 print(f"Description length: {len(description)} characters")
 
-    print(f"Total image documents created: {len(image_docs)}")
-    return image_docs
+        return image_docs
+
+    return []
 
 
 def main() -> None:
