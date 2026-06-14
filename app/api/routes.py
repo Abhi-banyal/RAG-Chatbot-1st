@@ -16,6 +16,7 @@ from app.schemas import (
 )
 from app.services.ingestion_service import (
     SUPPORTED_UPLOAD_SUFFIXES,
+    ingest_single_file,
     list_available_documents,
     rebuild_vectorstore,
     save_upload_bytes,
@@ -64,6 +65,16 @@ async def upload_documents(files: list[UploadFile] = File(...)) -> UploadRespons
             continue
 
         destination = save_upload_bytes(file.filename or "upload", content)
+        print(f"Uploaded file name: {file.filename or 'unknown'}")
+        print(f"Saved path: {destination}")
+
+        try:
+            ingest_single_file(destination)
+        except Exception as exc:
+            failed_files.append(file.filename or "unknown")
+            print(f"Failed to index {destination.name}: {exc}")
+            continue
+
         uploaded_files.append(
             UploadedFileItem(
                 name=destination.name,
@@ -73,7 +84,12 @@ async def upload_documents(files: list[UploadFile] = File(...)) -> UploadRespons
             )
         )
 
-    message = "Files uploaded successfully." if uploaded_files else "No files were uploaded."
+    if uploaded_files and failed_files:
+        message = "Some files were uploaded and indexed, but others failed."
+    elif uploaded_files:
+        message = "Files uploaded and indexed successfully."
+    else:
+        message = "No files were uploaded."
     return UploadResponse(message=message, uploaded_files=uploaded_files, failed_files=failed_files)
 
 

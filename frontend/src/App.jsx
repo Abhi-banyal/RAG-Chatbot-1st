@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getDocuments, getHealth, rebuildIndex, sendChat, uploadFiles } from './api'
+import { getDocuments, getHealth, sendChat, uploadFiles } from './api'
 import ChatInput from './components/ChatInput'
 import ChatLayout from './components/ChatLayout'
 import Header from './components/Header'
@@ -50,7 +50,6 @@ export default function App() {
   const [health, setHealth] = useState(null)
   const [documents, setDocuments] = useState([])
   const [uploadStatus, setUploadStatus] = useState('')
-  const [rebuildStatus, setRebuildStatus] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const assistantCount = useMemo(
@@ -101,7 +100,6 @@ export default function App() {
     setInput('')
     setError('')
     setUploadStatus('')
-    setRebuildStatus('')
     setSidebarOpen(false)
   }
 
@@ -158,29 +156,13 @@ export default function App() {
       const failed = response.failed_files?.length || 0
       setUploadStatus(
         failed > 0
-          ? `Uploaded ${uploaded} file(s). ${failed} file(s) were skipped. Rebuild the index to use new documents.`
-          : `Uploaded ${uploaded} file(s) successfully. Rebuild the index to use new documents.`,
+          ? `Uploaded and indexed ${uploaded} file(s). ${failed} file(s) were skipped.`
+          : `Uploaded and indexed ${uploaded} file(s) successfully.`,
       )
       await refreshDocuments()
     } catch (err) {
       setUploadStatus('')
       setError(err.message || 'Upload failed')
-    }
-  }
-
-  async function handleRebuild() {
-    setError('')
-    setRebuildStatus('Rebuilding index...')
-
-    try {
-      const response = await rebuildIndex()
-      setRebuildStatus(
-        `Indexed ${response.documents_indexed} document(s) into ${response.chunks_indexed} chunk(s).`,
-      )
-      await refreshDocuments()
-    } catch (err) {
-      setRebuildStatus('')
-      setError(err.message || 'Vectorstore rebuild failed')
     }
   }
 
@@ -191,10 +173,8 @@ export default function App() {
         health={health}
         documents={documents}
         uploadStatus={uploadStatus}
-        rebuildStatus={rebuildStatus}
         sessionId={sessionId}
         onUpload={handleUpload}
-        onRebuild={handleRebuild}
         onNewChat={startNewChat}
         onCloseMobile={() => setSidebarOpen(false)}
         isOpen={sidebarOpen}

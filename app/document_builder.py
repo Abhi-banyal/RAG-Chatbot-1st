@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from langchain_core.documents import Document
 
-from app.extractor import ExtractedContent, extract_all_content
+from app.extractor import ExtractedContent, extract_all_content, extract_file
 from app.config import INGESTION_DIRS
-from app.image_processor import build_image_documents
+from app.image_processor import build_image_documents, build_image_documents_for_file
 
 
 def extracted_content_to_document(item: ExtractedContent) -> Document:
@@ -42,6 +44,17 @@ def build_documents() -> list[Document]:
 
     if image_documents:
         print(f"Image Document objects created: {len(image_documents)}")
+
+    return documents
+
+
+def build_documents_for_file(file_path: Path) -> list[Document]:
+    extracted_items = extract_file(file_path)
+    documents = [extracted_content_to_document(item) for item in extracted_items if item.text]
+    image_documents = build_image_documents_for_file(file_path)
+    documents.extend(image_documents)
+
+    print(f"Total Document objects created for {file_path.name}: {len(documents)}")
 
     return documents
 

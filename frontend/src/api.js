@@ -49,10 +49,4 @@ export async function uploadFiles(files) {
   })
 }
 
-export async function rebuildIndex() {
-  return request('/ingest', {
-    method: 'POST',
-  })
-}
-
 export { API_BASE_URL }
